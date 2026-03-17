@@ -5,7 +5,7 @@ const createPlantingRequest = async (req, res) => {
   const farmer_id = req.user.id;
 
   try {
-    const [crops] = await db.query('SELECT total_maturity_days, baseline_yield_per_acre FROM CROPS WHERE id = ?', [crop_id]);
+    const [crops] = await db.query('SELECT total_maturity_days, baseline_yield_per_acre FROM crops WHERE id = ?', [crop_id]);
     if (crops.length === 0) {
       return res.status(404).json({ message: 'Crop not found' });
     }
@@ -18,7 +18,7 @@ const createPlantingRequest = async (req, res) => {
     const expected_yield_kg = land_size_acres * baseline_yield_per_acre;
 
     const [result] = await db.query(
-      `INSERT INTO PLANTING_REQUESTS 
+      `INSERT INTO planting_requests 
        (farmer_id, crop_id, land_size_acres, expected_yield_kg, planting_date, expected_harvest_date, latitude, longitude, region_name, status, notes) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
       [farmer_id, crop_id, land_size_acres, expected_yield_kg, planting_date, expected_harvest_date, latitude, longitude, region_name, notes]
@@ -50,7 +50,7 @@ const updatePlantingStatus = async (req, res) => {
     try {
       await connection.beginTransaction();
       const [plantings] = await connection.query(
-        'SELECT status, crop_id, expected_yield_kg FROM PLANTING_REQUESTS WHERE id = ?', [id]
+        'SELECT status, crop_id, expected_yield_kg FROM planting_requests WHERE id = ?', [id]
       );
 
       if (plantings.length === 0) {
@@ -59,16 +59,16 @@ const updatePlantingStatus = async (req, res) => {
       }
 
       const oldStatus = plantings[0].status;
-      await connection.query('UPDATE PLANTING_REQUESTS SET status = ? WHERE id = ?', [status, id]);
+      await connection.query('UPDATE planting_requests SET status = ? WHERE id = ?', [status, id]);
 
       if (status === 'Planted' && oldStatus !== 'Planted') {
-        const [crops] = await connection.query('SELECT price_per_kg FROM CROPS WHERE id = ?', [plantings[0].crop_id]);
+        const [crops] = await connection.query('SELECT price_per_kg FROM crops WHERE id = ?', [plantings[0].crop_id]);
         const default_price = crops[0].price_per_kg;
-        const [existing] = await connection.query('SELECT id FROM MARKETPLACE_ITEMS WHERE planting_request_id = ?', [id]);
+        const [existing] = await connection.query('SELECT id FROM marketplace_items WHERE planting_request_id = ?', [id]);
         
         if (existing.length === 0) {
           await connection.query(
-            `INSERT INTO MARKETPLACE_ITEMS (planting_request_id, available_quantity_kg, price_per_kg, listing_status) 
+            `INSERT INTO marketplace_items (planting_request_id, available_quantity_kg, price_per_kg, listing_status) 
              VALUES (?, ?, ?, 'Hidden')`,
             [id, plantings[0].expected_yield_kg, default_price]
           );
@@ -94,8 +94,8 @@ const getFarmerPlantings = async (req, res) => {
   try {
     const [plantings] = await db.query(
       `SELECT pr.*, c.crop_name, c.image_url 
-       FROM PLANTING_REQUESTS pr 
-       JOIN CROPS c ON pr.crop_id = c.id 
+       FROM planting_requests pr 
+       JOIN crops c ON pr.crop_id = c.id 
        WHERE pr.farmer_id = ? 
        ORDER BY pr.created_at DESC`,
       [farmer_id]
@@ -115,8 +115,8 @@ const getPlantingDetails = async (req, res) => {
     // 1. Get Core Planting Details
     const [plantings] = await db.query(
       `SELECT pr.*, c.crop_name, c.image_url, c.description as crop_description
-       FROM PLANTING_REQUESTS pr
-       JOIN CROPS c ON pr.crop_id = c.id
+       FROM planting_requests pr
+       JOIN crops c ON pr.crop_id = c.id
        WHERE pr.id = ? AND pr.farmer_id = ?`,
       [id, farmer_id]
     );
@@ -129,7 +129,7 @@ const getPlantingDetails = async (req, res) => {
 
     // 2. Get Growth Stages and calculate the duration-based calendar
     const [stages] = await db.query(
-      'SELECT stage_name, day_offset FROM GROWTH_STAGES WHERE crop_id = ? ORDER BY day_offset ASC',
+      'SELECT stage_name, day_offset FROM growth_stages WHERE crop_id = ? ORDER BY day_offset ASC',
       [planting.crop_id]
     );
 

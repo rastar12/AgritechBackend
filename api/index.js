@@ -6,6 +6,8 @@ import plantingRoutes from './routes/plantingRoutes.js';
 import marketplaceRoutes from './routes/marketplaceRoutes.js';
 import cropRoutes from './routes/cropRoutes.js';
 import farmerRoutes from './routes/farmerRoutes.js';
+import buyerRoutes from './routes/buyerRoutes.js';
+import mpesaRoutes from './routes/mpesaRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -18,6 +20,8 @@ app.use('/api/planting', plantingRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/crops', cropRoutes);
 app.use('/api/farmer', farmerRoutes);
+app.use('/api/buyer', buyerRoutes);
+app.use('/api/mpesa', mpesaRoutes);
 
 app.get('/health', async (req, res) => {
   try {

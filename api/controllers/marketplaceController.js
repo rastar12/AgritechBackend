@@ -6,9 +6,9 @@ const getMyListings = async (req, res) => {
   try {
     const [listings] = await db.query(
       `SELECT mi.*, pr.crop_id, pr.status as planting_status, c.crop_name, c.image_url 
-       FROM MARKETPLACE_ITEMS mi
-       JOIN PLANTING_REQUESTS pr ON mi.planting_request_id = pr.id
-       JOIN CROPS c ON pr.crop_id = c.id
+       FROM marketplace_items mi
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN crops c ON pr.crop_id = c.id
        WHERE pr.farmer_id = ?`,
       [farmer_id]
     );
@@ -29,8 +29,8 @@ const updateListing = async (req, res) => {
     // 1. Verify ownership
     const [items] = await db.query(
       `SELECT mi.id 
-       FROM MARKETPLACE_ITEMS mi
-       JOIN PLANTING_REQUESTS pr ON mi.planting_request_id = pr.id
+       FROM marketplace_items mi
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
        WHERE mi.id = ? AND pr.farmer_id = ?`,
       [id, farmer_id]
     );
@@ -41,7 +41,7 @@ const updateListing = async (req, res) => {
 
     // 2. Update the listing
     // We only update fields provided in the request
-    let query = 'UPDATE MARKETPLACE_ITEMS SET updated_at = NOW()';
+    let query = 'UPDATE marketplace_items SET updated_at = NOW()';
     const params = [];
 
     if (price_per_kg !== undefined) {
@@ -75,10 +75,10 @@ const getActiveMarketplace = async (req, res) => {
   try {
     const [items] = await db.query(
       `SELECT mi.*, pr.region_name, pr.expected_harvest_date, c.crop_name, c.image_url, u.full_name as farmer_name
-       FROM MARKETPLACE_ITEMS mi
-       JOIN PLANTING_REQUESTS pr ON mi.planting_request_id = pr.id
-       JOIN CROPS c ON pr.crop_id = c.id
-       JOIN USERS u ON pr.farmer_id = u.id
+       FROM marketplace_items mi
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN crops c ON pr.crop_id = c.id
+       JOIN users u ON pr.farmer_id = u.id
        WHERE mi.listing_status = 'Active' AND mi.available_quantity_kg > 0`
     );
 

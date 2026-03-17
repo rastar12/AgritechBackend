@@ -10,7 +10,7 @@ const getFarmerDashboard = async (req, res) => {
         COUNT(id) as total_plantings,
         SUM(CASE WHEN status = 'Planted' OR status = 'Growing' THEN 1 ELSE 0 END) as active_plantings,
         SUM(expected_yield_kg) as total_expected_yield
-       FROM PLANTING_REQUESTS 
+       FROM planting_requests 
        WHERE farmer_id = ?`,
       [farmer_id]
     );
@@ -26,9 +26,9 @@ const getFarmerDashboard = async (req, res) => {
         c.crop_name,
         pr.id as planting_id,
         DATEDIFF(DATE_ADD(pr.planting_date, INTERVAL gs.day_offset DAY), CURDATE()) as days_remaining
-       FROM PLANTING_REQUESTS pr
-       JOIN GROWTH_STAGES gs ON pr.crop_id = gs.crop_id
-       JOIN CROPS c ON pr.crop_id = c.id
+       FROM planting_requests pr
+       JOIN growth_stages gs ON pr.crop_id = gs.crop_id
+       JOIN crops c ON pr.crop_id = c.id
        WHERE pr.farmer_id = ? 
        AND pr.status IN ('Planted', 'Growing')
        AND DATE_ADD(pr.planting_date, INTERVAL gs.day_offset DAY) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)

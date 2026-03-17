@@ -6,31 +6,32 @@ const initSchema = async () => {
 
     // 1. Drop existing tables in reverse order of dependency
     await db.query('SET FOREIGN_KEY_CHECKS = 0');
-    await db.query('DROP TABLE IF EXISTS SYSTEM_LOGS');
-    await db.query('DROP TABLE IF EXISTS ORDERS');
-    await db.query('DROP TABLE IF EXISTS MARKETPLACE_ITEMS');
-    await db.query('DROP TABLE IF EXISTS PLANTING_REQUESTS');
-    await db.query('DROP TABLE IF EXISTS USERS');
-    await db.query('DROP TABLE IF EXISTS CROPS');
-    await db.query('DROP TABLE IF EXISTS USER_TYPES');
+    await db.query('DROP TABLE IF EXISTS system_logs');
+    await db.query('DROP TABLE IF EXISTS orders');
+    await db.query('DROP TABLE IF EXISTS marketplace_items');
+    await db.query('DROP TABLE IF EXISTS planting_requests');
+    await db.query('DROP TABLE IF EXISTS growth_stages');
+    await db.query('DROP TABLE IF EXISTS users');
+    await db.query('DROP TABLE IF EXISTS crops');
+    await db.query('DROP TABLE IF EXISTS user_types');
     await db.query('SET FOREIGN_KEY_CHECKS = 1');
 
     console.log('🗑️  Existing tables dropped.');
 
     // 2. Create Tables Directly
 
-    // USER_TYPES
+    // user_types
     await db.query(`
-      CREATE TABLE USER_TYPES (
+      CREATE TABLE user_types (
         id INT AUTO_INCREMENT PRIMARY KEY,
         role_name ENUM('Farmer', 'Buyer', 'Admin') NOT NULL UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
 
-    // CROPS
+    // crops
     await db.query(`
-      CREATE TABLE CROPS (
+      CREATE TABLE crops (
         id INT AUTO_INCREMENT PRIMARY KEY,
         crop_name VARCHAR(50) NOT NULL UNIQUE,
         baseline_yield_per_acre DECIMAL(10,2) NOT NULL,
@@ -44,21 +45,21 @@ const initSchema = async () => {
       ) ENGINE=InnoDB;
     `);
 
-    // GROWTH_STAGES
+    // growth_stages
     await db.query(`
-      CREATE TABLE GROWTH_STAGES (
+      CREATE TABLE growth_stages (
         id INT AUTO_INCREMENT PRIMARY KEY,
         crop_id INT NOT NULL,
         stage_name VARCHAR(100) NOT NULL,
         day_offset INT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (crop_id) REFERENCES CROPS(id) ON DELETE CASCADE
+        CONSTRAINT fk_growth_stages_crop FOREIGN KEY (crop_id) REFERENCES crops(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
 
-    // USERS
+    // users
     await db.query(`
-      CREATE TABLE USERS (
+      CREATE TABLE users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         type_id INT NOT NULL,
         full_name VARCHAR(100) NOT NULL,
@@ -68,13 +69,13 @@ const initSchema = async () => {
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (type_id) REFERENCES USER_TYPES(id)
+        CONSTRAINT fk_users_type FOREIGN KEY (type_id) REFERENCES user_types(id)
       ) ENGINE=InnoDB;
     `);
 
-    // PLANTING_REQUESTS
+    // planting_requests
     await db.query(`
-      CREATE TABLE PLANTING_REQUESTS (
+      CREATE TABLE planting_requests (
         id INT AUTO_INCREMENT PRIMARY KEY,
         farmer_id INT NOT NULL,
         crop_id INT NOT NULL,
@@ -89,14 +90,14 @@ const initSchema = async () => {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (farmer_id) REFERENCES USERS(id),
-        FOREIGN KEY (crop_id) REFERENCES CROPS(id)
+        CONSTRAINT fk_planting_farmer FOREIGN KEY (farmer_id) REFERENCES users(id),
+        CONSTRAINT fk_planting_crop FOREIGN KEY (crop_id) REFERENCES crops(id)
       ) ENGINE=InnoDB;
     `);
 
-    // MARKETPLACE_ITEMS
+    // marketplace_items
     await db.query(`
-      CREATE TABLE MARKETPLACE_ITEMS (
+      CREATE TABLE marketplace_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
         planting_request_id INT NOT NULL UNIQUE,
         available_quantity_kg DECIMAL(10,2) NOT NULL,
@@ -106,13 +107,13 @@ const initSchema = async () => {
         sold_out_date TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (planting_request_id) REFERENCES PLANTING_REQUESTS(id) ON DELETE CASCADE
+        CONSTRAINT fk_marketplace_planting FOREIGN KEY (planting_request_id) REFERENCES planting_requests(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
 
-    // ORDERS
+    // orders
     await db.query(`
-      CREATE TABLE ORDERS (
+      CREATE TABLE orders (
         id INT AUTO_INCREMENT PRIMARY KEY,
         buyer_id INT NOT NULL,
         marketplace_item_id INT NOT NULL,
@@ -128,14 +129,14 @@ const initSchema = async () => {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (buyer_id) REFERENCES USERS(id),
-        FOREIGN KEY (marketplace_item_id) REFERENCES MARKETPLACE_ITEMS(id)
+        CONSTRAINT fk_orders_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
+        CONSTRAINT fk_orders_item FOREIGN KEY (marketplace_item_id) REFERENCES marketplace_items(id)
       ) ENGINE=InnoDB;
     `);
 
-    // SYSTEM_LOGS (User Logs)
+    // system_logs
     await db.query(`
-      CREATE TABLE SYSTEM_LOGS (
+      CREATE TABLE system_logs (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id INT,
         action VARCHAR(100) NOT NULL,
@@ -146,15 +147,15 @@ const initSchema = async () => {
         ip_address VARCHAR(45),
         user_agent TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES USERS(id) ON DELETE SET NULL
+        CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB;
     `);
 
-    console.log('✅ All core tables (including SYSTEM_LOGS) created.');
+    console.log('✅ All core tables (including system_logs) created.');
 
     // 3. Seed User Types
-    await db.query(`INSERT INTO USER_TYPES (role_name) VALUES ('Farmer'), ('Buyer'), ('Admin')`);
-    console.log('🌱 Seeded USER_TYPES: Farmer, Buyer, Admin.');
+    await db.query(`INSERT INTO user_types (role_name) VALUES ('Farmer'), ('Buyer'), ('Admin')`);
+    console.log('🌱 Seeded user_types: Farmer, Buyer, Admin.');
 
     console.log('✨ Database initialization successful.');
     process.exit(0);
