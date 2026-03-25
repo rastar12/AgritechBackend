@@ -27,18 +27,23 @@ const getItemsByCropId = async (req, res) => {
     // We join marketplace_items with planting_requests to get harvest date and region
     const [items] = await db.query(
       `SELECT 
-        mi.id as marketplace_item_id,
+        mi.id,
         mi.available_quantity_kg,
         mi.price_per_kg,
         mi.listing_status,
         pr.expected_harvest_date,
         pr.region_name,
         pr.status as planting_status,
-        u.full_name as farmer_name
+        u.full_name as farmer_name,
+        c.crop_name,
+        c.image_url,
+        c.description
        FROM marketplace_items mi
        JOIN planting_requests pr ON mi.planting_request_id = pr.id
        JOIN users u ON pr.farmer_id = u.id
-       WHERE pr.crop_id = ?`,
+       JOIN crops c ON pr.crop_id = c.id
+       WHERE pr.crop_id = ? AND mi.listing_status = 'Active' AND mi.available_quantity_kg > 0
+       ORDER BY pr.expected_harvest_date ASC`,
       [id]
     );
 

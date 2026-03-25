@@ -24,4 +24,11 @@ const isFarmer = (req, res, next) => {
   next();
 };
 
-export default { verifyToken, isFarmer };
+const isBuyer = (req, res, next) => {
+  if (req.user.role !== 'Buyer') {
+    return res.status(403).json({ message: 'Access denied. Buyers only.' });
+  }
+  next();
+};
+
+export default { verifyToken, isFarmer, isBuyer };

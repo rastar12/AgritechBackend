@@ -89,4 +89,31 @@ const getActiveMarketplace = async (req, res) => {
   }
 };
 
-export default { getMyListings, updateListing, getActiveMarketplace };
+const getMarketplaceItemById = async (req, res) => {
+  const { id } = req.params; // marketplace_item id
+  try {
+    const [items] = await db.query(
+      `SELECT mi.id, mi.available_quantity_kg, mi.price_per_kg, mi.listing_status, 
+              pr.expected_harvest_date, pr.region_name, pr.status as planting_status,
+              pr.farmer_id, u.full_name as farmer_name,
+              c.crop_name, c.image_url, c.description, c.id as crop_id
+       FROM marketplace_items mi
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN users u ON pr.farmer_id = u.id
+       JOIN crops c ON pr.crop_id = c.id
+       WHERE mi.id = ?`,
+      [id]
+    );
+
+    if (items.length === 0) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json({ data: items[0] });
+  } catch (error) {
+    console.error('Error fetching marketplace item:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export default { getMyListings, updateListing, getActiveMarketplace, getMarketplaceItemById };

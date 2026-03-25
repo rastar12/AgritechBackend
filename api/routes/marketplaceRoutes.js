@@ -6,6 +6,7 @@ const router = express.Router();
 
 // Public route: Everyone (including buyers) can see active listings
 router.get('/active', marketplaceController.getActiveMarketplace);
+router.get('/item/:id', marketplaceController.getMarketplaceItemById);
 
 // Private routes: Farmers only
 router.use(authMiddleware.verifyToken);

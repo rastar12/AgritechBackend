@@ -152,7 +152,7 @@ export const googleOAuth = async (req, res) => {
       const password_hash = await bcrypt.hash(generatedPassword, salt);
       
       // Default to Buyer role
-      const [roles] = await db.query('SELECT id FROM user_types WHERE role_name = "Buyer"');
+      const [roles] = await db.query('SELECT id FROM user_types WHERE role_name = ?', ['Buyer']);
       const type_id = roles[0].id;
 
       const [result] = await db.query(

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import db from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import plantingRoutes from './routes/plantingRoutes.js';
@@ -12,6 +13,9 @@ import mpesaRoutes from './routes/mpesaRoutes.js';
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(cors({
+  origin: 'http://localhost:5173'
+}));
 app.use(express.json());
 
 // Routes
