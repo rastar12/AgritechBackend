@@ -67,6 +67,7 @@ const initSchema = async () => {
         phone_number VARCHAR(20) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT fk_users_type FOREIGN KEY (type_id) REFERENCES user_types(id)
