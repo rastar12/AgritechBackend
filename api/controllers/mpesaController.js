@@ -103,4 +103,38 @@ const stkCallback = async (req, res) => {
   res.status(200).json("ok");
 };
 
-export default { initiateStkPush, stkCallback };
+const initiateB2CPayout = async (phone, amount, order_id) => {
+  const token = await generateAccessToken();
+  
+  // These should be in .env
+  const initiatorName = process.env.MPESA_INITIATOR_NAME;
+  const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL;
+  const shortCode = process.env.MPESA_SHORTCODE;
+  
+  try {
+    // Note: This is for Safaricom Sandbox. Production URL is different.
+    const response = await axios.post(
+      "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest",
+      {
+        InitiatorName: initiatorName,
+        SecurityCredential: securityCredential,
+        CommandID: "BusinessPayment",
+        Amount: Math.round(amount),
+        PartyA: shortCode,
+        PartyB: phone,
+        Remarks: `Payout for Order ${order_id}`,
+        QueueTimeOutURL: process.env.B2C_TIMEOUT_URL,
+        ResultURL: process.env.B2C_RESULT_URL,
+        Occasion: "FarmerPayout"
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("B2C Payout Error:", error.response?.data || error.message);
+    throw new Error("B2C Payout initiation failed");
+  }
+};
+
+export default { initiateStkPush, stkCallback, initiateB2CPayout };

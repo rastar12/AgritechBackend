@@ -61,4 +61,59 @@ const placeOrder = async (req, res) => {
   }
 };
 
-export default { placeOrder };
+/**
+ * Confirms delivery and releases funds to the farmer.
+ */
+const confirmDelivery = async (req, res) => {
+  const { order_id } = req.params;
+  const buyer_id = req.user.id;
+
+  try {
+    // 1. Fetch order details and farmer phone number
+    const [orders] = await db.query(
+      `SELECT o.*, u.phone_number as farmer_phone 
+       FROM orders o
+       JOIN marketplace_items mi ON o.marketplace_item_id = mi.id
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN users u ON pr.farmer_id = u.id
+       WHERE o.id = ? AND o.buyer_id = ?`,
+      [order_id, buyer_id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found or not authorized' });
+    }
+
+    const order = orders[0];
+
+    if (order.escrow_status !== 'Paid') {
+      return res.status(400).json({ message: 'Order payment is not in escrow or already released' });
+    }
+
+    // 2. Trigger B2C Payout to Farmer
+    // We deduct a platform fee if necessary (e.g., 5%)
+    const platformFeePercent = 0.05;
+    const payoutAmount = order.total_price * (1 - platformFeePercent);
+    
+    // In a real scenario, we should handle the B2C callback to mark as 'Released'
+    // For now, we'll initiate and update status to 'Delivered'
+    await mpesaController.initiateB2CPayout(order.farmer_phone, payoutAmount, order_id);
+
+    // 3. Update order status
+    await db.query(
+      "UPDATE orders SET escrow_status = 'Released' WHERE id = ?",
+      [order_id]
+    );
+
+    res.json({ 
+      message: 'Delivery confirmed. Funds have been released to the farmer.',
+      payout_amount: payoutAmount
+    });
+
+  } catch (error) {
+    console.error('Error confirming delivery:', error);
+    res.status(500).json({ message: 'Internal server error during fund release' });
+  }
+};
+
+export default { placeOrder, confirmDelivery };

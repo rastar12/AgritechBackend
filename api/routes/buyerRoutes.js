@@ -15,5 +15,6 @@ router.get('/crops/:id/items', buyerController.getItemsByCropId);
 router.use(authMiddleware.verifyToken);
 router.get('/orders', authMiddleware.isBuyer, buyerController.getBuyerOrders);
 router.post('/orders/place', authMiddleware.isBuyer, orderController.placeOrder);
+router.post('/orders/:order_id/confirm-delivery', authMiddleware.isBuyer, orderController.confirmDelivery);
 
 export default router;

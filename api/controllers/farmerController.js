@@ -48,4 +48,34 @@ const getFarmerDashboard = async (req, res) => {
   }
 };
 
-export default { getFarmerDashboard };
+/**
+ * Returns all orders placed on the marketplace items belonging to this farmer.
+ */
+const getFarmerOrders = async (req, res) => {
+  const farmer_id = req.user.id;
+
+  try {
+    const [orders] = await db.query(
+      `SELECT 
+        o.*,
+        c.crop_name,
+        u.full_name as buyer_name,
+        u.phone_number as buyer_phone
+       FROM orders o
+       JOIN marketplace_items mi ON o.marketplace_item_id = mi.id
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN crops c ON pr.crop_id = c.id
+       JOIN users u ON o.buyer_id = u.id
+       WHERE pr.farmer_id = ?
+       ORDER BY o.created_at DESC`,
+      [farmer_id]
+    );
+
+    res.json({ data: orders });
+  } catch (error) {
+    console.error('Error fetching farmer orders:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export default { getFarmerDashboard, getFarmerOrders };

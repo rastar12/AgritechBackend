@@ -101,4 +101,4 @@ Fetch the order history for the logged-in buyer.
 ---
 
 ## 5. Base URL
-Development: `http://localhost:3000`
+Development: `http://localhost:3050/api`

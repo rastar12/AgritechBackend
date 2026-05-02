@@ -10,8 +10,10 @@ import farmerRoutes from './routes/farmerRoutes.js';
 import buyerRoutes from './routes/buyerRoutes.js';
 import mpesaRoutes from './routes/mpesaRoutes.js';
 
+
+
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3050;
 
 app.use(cors({
   origin: '*' // temporarily allow all origins for ngrok access

@@ -5,5 +5,6 @@ import authMiddleware from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.get('/dashboard', authMiddleware.verifyToken, authMiddleware.isFarmer, farmerController.getFarmerDashboard);
+router.get('/orders', authMiddleware.verifyToken, authMiddleware.isFarmer, farmerController.getFarmerOrders);
 
 export default router;

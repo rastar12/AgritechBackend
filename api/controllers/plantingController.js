@@ -43,7 +43,7 @@ const createPlantingRequest = async (req, res) => {
 
 const updatePlantingStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, actual_yield_kg } = req.body;
 
   try {
     const connection = await db.getConnection();
@@ -59,7 +59,21 @@ const updatePlantingStatus = async (req, res) => {
       }
 
       const oldStatus = plantings[0].status;
-      await connection.query('UPDATE planting_requests SET status = ? WHERE id = ?', [status, id]);
+      
+      // Update planting status and actual yield if provided
+      if (status === 'Harvested' && actual_yield_kg !== undefined) {
+        await connection.query(
+          'UPDATE planting_requests SET status = ?, actual_yield_kg = ? WHERE id = ?', 
+          [status, actual_yield_kg, id]
+        );
+        // Sync actual yield with marketplace available quantity
+        await connection.query(
+          'UPDATE marketplace_items SET available_quantity_kg = ? WHERE planting_request_id = ?',
+          [actual_yield_kg, id]
+        );
+      } else {
+        await connection.query('UPDATE planting_requests SET status = ? WHERE id = ?', [status, id]);
+      }
 
       if (status === 'Planted' && oldStatus !== 'Planted') {
         const [crops] = await connection.query('SELECT price_per_kg FROM crops WHERE id = ?', [plantings[0].crop_id]);
@@ -129,7 +143,7 @@ const getPlantingDetails = async (req, res) => {
 
     // 2. Get Growth Stages and calculate the duration-based calendar
     const [stages] = await db.query(
-      'SELECT stage_name, day_offset FROM growth_stages WHERE crop_id = ? ORDER BY day_offset ASC',
+      'SELECT stage_name, day_offset, instructions FROM growth_stages WHERE crop_id = ? ORDER BY day_offset ASC',
       [planting.crop_id]
     );
 
@@ -154,7 +168,8 @@ const getPlantingDetails = async (req, res) => {
         end_day: endDay,
         duration_days: duration,
         start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0]
+        end_date: endDate.toISOString().split('T')[0],
+        instructions: stage.instructions
       };
     });
 
