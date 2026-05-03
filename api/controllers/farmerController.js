@@ -16,9 +16,6 @@ const getFarmerDashboard = async (req, res) => {
     );
 
     // 2. Get Upcoming Events (Growth Stages in the next 7 days)
-    // Logic: 
-    // Event Date = planting_date + day_offset
-    // We want: Event Date is BETWEEN CURDATE() AND CURDATE() + 7
     const [upcomingEvents] = await db.query(
       `SELECT 
         gs.stage_name,
@@ -60,7 +57,9 @@ const getFarmerOrders = async (req, res) => {
         o.*,
         c.crop_name,
         u.full_name as buyer_name,
-        u.phone_number as buyer_phone
+        u.phone_number as buyer_phone,
+        pr.expected_harvest_date,
+        pr.region_name
        FROM orders o
        JOIN marketplace_items mi ON o.marketplace_item_id = mi.id
        JOIN planting_requests pr ON mi.planting_request_id = pr.id

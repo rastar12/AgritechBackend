@@ -88,4 +88,42 @@ const getBuyerOrders = async (req, res) => {
   }
 };
 
-export default { getMarketplaceCrops, getItemsByCropId, getBuyerOrders };
+/**
+ * Returns details for a specific order by ID.
+ */
+const getBuyerOrderById = async (req, res) => {
+  const buyer_id = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const [orders] = await db.query(
+      `SELECT 
+        o.*,
+        c.crop_name,
+        c.image_url,
+        c.description as crop_description,
+        pr.region_name,
+        pr.expected_harvest_date,
+        u.full_name as farmer_name,
+        u.phone_number as farmer_phone
+       FROM orders o
+       JOIN marketplace_items mi ON o.marketplace_item_id = mi.id
+       JOIN planting_requests pr ON mi.planting_request_id = pr.id
+       JOIN crops c ON pr.crop_id = c.id
+       JOIN users u ON pr.farmer_id = u.id
+       WHERE o.id = ? AND o.buyer_id = ?`,
+      [id, buyer_id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json({ data: orders[0] });
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export default { getMarketplaceCrops, getItemsByCropId, getBuyerOrders, getBuyerOrderById };

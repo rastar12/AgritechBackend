@@ -5,7 +5,7 @@ import mpesaController from './mpesaController.js';
  * Places a new order and initiates M-Pesa STK Push.
  */
 const placeOrder = async (req, res) => {
-  const { marketplace_item_id, quantity, phone_number } = req.body;
+  const { marketplace_item_id, quantity, phone_number, delivery_address } = req.body;
   const buyer_id = req.user.id;
 
   if (!phone_number.match(/^254\d{9}$/)) {
@@ -17,11 +17,10 @@ const placeOrder = async (req, res) => {
     await connection.beginTransaction();
 
     // 1. Process Order via Stored Procedure
-    // CALL ProcessOrder(p_buyer_id, p_marketplace_item_id, p_quantity, p_phone_number, @p_order_id)
     await connection.query('SET @p_order_id = 0');
     await connection.query(
-      'CALL ProcessOrder(?, ?, ?, ?, @p_order_id)',
-      [buyer_id, marketplace_item_id, quantity, phone_number]
+      'CALL ProcessOrder(?, ?, ?, ?, ?, @p_order_id)',
+      [buyer_id, marketplace_item_id, quantity, phone_number, delivery_address]
     );
     
     const [[{ order_id }]] = await connection.query('SELECT @p_order_id AS order_id');
@@ -36,8 +35,6 @@ const placeOrder = async (req, res) => {
     await connection.commit();
 
     // 3. Initiate STK Push
-    // We pass req/res to a helper in mpesaController or handle it here.
-    // To keep it clean, let's call the STK push logic directly.
     const stkResponse = await mpesaController.initiateStkPush(phone_number, order.total_price, order_id);
 
     res.status(201).json({
@@ -50,7 +47,6 @@ const placeOrder = async (req, res) => {
     await connection.rollback();
     console.error('Error placing order:', error);
     
-    // Handle specific MySQL errors (like SIGNALs from the procedure)
     if (error.sqlState === '45000') {
       return res.status(400).json({ message: error.message });
     }
@@ -63,10 +59,12 @@ const placeOrder = async (req, res) => {
 
 /**
  * Confirms delivery and releases funds to the farmer.
+ * Can be triggered by the Buyer or an Admin override.
  */
 const confirmDelivery = async (req, res) => {
   const { order_id } = req.params;
   const buyer_id = req.user.id;
+  const isAdmin = req.user.role === 'Admin';
 
   try {
     // 1. Fetch order details and farmer phone number
@@ -76,8 +74,8 @@ const confirmDelivery = async (req, res) => {
        JOIN marketplace_items mi ON o.marketplace_item_id = mi.id
        JOIN planting_requests pr ON mi.planting_request_id = pr.id
        JOIN users u ON pr.farmer_id = u.id
-       WHERE o.id = ? AND o.buyer_id = ?`,
-      [order_id, buyer_id]
+       WHERE o.id = ? ${isAdmin ? '' : 'AND o.buyer_id = ?'}`,
+      isAdmin ? [order_id] : [order_id, buyer_id]
     );
 
     if (orders.length === 0) {
@@ -91,12 +89,9 @@ const confirmDelivery = async (req, res) => {
     }
 
     // 2. Trigger B2C Payout to Farmer
-    // We deduct a platform fee if necessary (e.g., 5%)
     const platformFeePercent = 0.05;
     const payoutAmount = order.total_price * (1 - platformFeePercent);
     
-    // In a real scenario, we should handle the B2C callback to mark as 'Released'
-    // For now, we'll initiate and update status to 'Delivered'
     await mpesaController.initiateB2CPayout(order.farmer_phone, payoutAmount, order_id);
 
     // 3. Update order status
@@ -106,8 +101,9 @@ const confirmDelivery = async (req, res) => {
     );
 
     res.json({ 
-      message: 'Delivery confirmed. Funds have been released to the farmer.',
-      payout_amount: payoutAmount
+      message: isAdmin ? 'Admin Override: Delivery confirmed and funds released.' : 'Delivery confirmed. Funds have been released.',
+      payout_amount: payoutAmount,
+      released_by: isAdmin ? 'Admin' : 'Buyer'
     });
 
   } catch (error) {

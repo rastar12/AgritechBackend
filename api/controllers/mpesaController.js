@@ -109,7 +109,7 @@ const initiateB2CPayout = async (phone, amount, order_id) => {
   // These should be in .env
   const initiatorName = process.env.MPESA_INITIATOR_NAME;
   const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL;
-  const shortCode = process.env.MPESA_SHORTCODE;
+  const shortCode = process.env.B2C_SHORTCODE || process.env.MPESA_SHORTCODE;
   
   try {
     // Note: This is for Safaricom Sandbox. Production URL is different.
@@ -137,4 +137,33 @@ const initiateB2CPayout = async (phone, amount, order_id) => {
   }
 };
 
-export default { initiateStkPush, stkCallback, initiateB2CPayout };
+const b2cResult = async (req, res) => {
+  console.log("--- B2C Payout Result ---");
+  const result = req.body.Result;
+  
+  if (!result) {
+    console.error("Invalid B2C Result Data:", req.body);
+    return res.status(400).json({ error: "Invalid B2C Result data" });
+  }
+
+  const { ResultCode, ResultDesc, OriginatorConversationID, ConversationID, TransactionID } = result;
+
+  if (ResultCode === 0) {
+    console.log(`✅ B2C Payout Successful: ${ResultDesc}`);
+    console.log(`Transaction ID: ${TransactionID}`);
+    // Here you would typically update your database to mark the order as 'Released'
+    // and record the TransactionID for auditing.
+  } else {
+    console.error(`❌ B2C Payout Failed: ${ResultDesc} (Code: ${ResultCode})`);
+  }
+
+  res.status(200).json("ok");
+};
+
+const b2cTimeout = async (req, res) => {
+  console.error("--- B2C Payout Timeout ---");
+  console.error("The B2C request timed out:", req.body);
+  res.status(200).json("ok");
+};
+
+export default { initiateStkPush, stkCallback, initiateB2CPayout, b2cResult, b2cTimeout };

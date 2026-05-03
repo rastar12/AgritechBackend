@@ -14,6 +14,7 @@ router.get('/crops/:id/items', buyerController.getItemsByCropId);
 // Private routes: Buyers only
 router.use(authMiddleware.verifyToken);
 router.get('/orders', authMiddleware.isBuyer, buyerController.getBuyerOrders);
+router.get('/orders/:id', authMiddleware.isBuyer, buyerController.getBuyerOrderById);
 router.post('/orders/place', authMiddleware.isBuyer, orderController.placeOrder);
 router.post('/orders/:order_id/confirm-delivery', authMiddleware.isBuyer, orderController.confirmDelivery);
 
